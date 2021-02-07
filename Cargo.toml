@@ -8,7 +8,3 @@ edition = "2018"
 
 [dependencies]
 nix = "0.19.1"
-
-[lib]
-name = "interpreter"
-path = "src/interpreter.rs"

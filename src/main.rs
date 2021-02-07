@@ -1,8 +1,8 @@
-use interpreter::run_script;
 use io::{Read, Write};
 use nix::unistd::*;
 use std::fs::{read_dir, File};
 use std::io;
+mod interpreter;
 
 struct Command {
     cmd: &'static str,
@@ -12,35 +12,34 @@ struct Command {
 fn get_directory_content() -> String {
     let f = getcwd().unwrap();
     let dirreader = read_dir(f).unwrap();
-    let res = dirreader.fold(String::new(), |acc, curr| {
+    dirreader.fold(String::new(), |acc, curr| {
         let name = curr.unwrap().file_name();
         acc + name.to_str().unwrap() + " "
-    });
-    res
+    })
 }
 
 fn run_file(path: &str) {
     let mut file = File::open(path).unwrap();
     let mut contents = String::new();
     file.read_to_string(&mut contents).unwrap();
-    run_script(&contents);
+    interpreter::run_script(&contents);
 }
 
 fn run_prompt() {
     let mut line = String::new();
     loop {
-        io::stdout().write(b"> ").unwrap();
-        io::stdout().flush();
+        io::stdout().write_all(b"> ").unwrap();
+        io::stdout().flush().unwrap();
         io::stdin().read_line(&mut line).unwrap();
-        if line == "exit" {
+        if line == ".exit" {
             return;
         }
-        run_script(&line);
+        interpreter::run_script(&line);
         line.clear();
     }
 }
 
-fn dispatch(arg: &String, commands: &Vec<Command>) {
+fn dispatch(arg: &str, commands: &[Command]) {
     let mut cmd_iter = arg.split_ascii_whitespace();
     let command_string = cmd_iter.next().unwrap();
     let cmd = commands.iter().rfind(|x| x.cmd == command_string);
@@ -90,10 +89,14 @@ fn main() -> io::Result<()> {
     let mut line: String = String::new();
     loop {
         io::stdin().read_line(&mut line)?;
-        if line.trim().len() != 0 {
-            dispatch(&line, &commands);
-            line.clear();
+        let trimmed = line.trim();
+        if trimmed == "exit" {
+            break;
         }
+        if !trimmed.is_empty() {
+            dispatch(&line, &commands);
+        }
+        line.clear();
     }
     Ok(())
 }
