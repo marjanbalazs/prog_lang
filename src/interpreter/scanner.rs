@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+#[derive(Clone)]
 pub enum TokenType {
     LeftParen,
     RightParen,
@@ -255,7 +256,7 @@ impl<'v> Scanner<'v> {
                         }
                     }
                     match self.keyword_map.get(&parsed[..]) {
-                        Some(key) => self.tokens.push(self.create_token(*key)),
+                        Some(key) => self.tokens.push(self.create_token(key.to_owned())),
                         None => self
                             .tokens
                             .push(self.create_token(TokenType::Identifier(parsed))),

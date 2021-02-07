@@ -2,7 +2,10 @@ use std::vec::Vec;
 mod parser;
 mod scanner;
 
-use self::{parser::Parser, scanner::{Scanner, Token}};
+use self::{
+    parser::Parser,
+    scanner::{Scanner, Token},
+};
 
 pub fn run_script(code: &str) {
     println!("Running script...");
@@ -12,5 +15,5 @@ pub fn run_script(code: &str) {
 
     let mut parser = Parser::new(&tokens);
     parser.build_ast();
-    println!("{:?}", parser.tree);
+    parser.print();
 }

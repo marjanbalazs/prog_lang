@@ -1,6 +1,6 @@
 use super::scanner::{Token, TokenType};
 pub struct Parser<'a> {
-    pub tree: Option<Box<Expression>>,
+    tree: Option<Box<Expression>>,
     current_node: usize,
     tokens: &'a Vec<Token>,
 }
@@ -20,6 +20,9 @@ impl<'a> Parser<'a> {
             "Error at line: {} at pos {}. Message: {}",
             curr_line, curr_pos, e
         )
+    }
+    pub fn print(&self) {
+        println!("{:?}", self.tree);
     }
     pub fn build_ast(&mut self) {
         self.tree = match self.parse_expr() {
