@@ -101,23 +101,23 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
     fn parse_factor(&mut self) -> Result<Expression, String> {
-        let expr = self.parse_unary()?;
+        let mut expr = self.parse_unary()?;
 
-        match self.tokens.get(self.current_node) {
-            Some(x) => match x.token_type {
+        while let Some(x) = self.tokens.get(self.current_node) {
+            match x.token_type {
                 TokenType::Star | TokenType::Slash => {
                     self.current_node += 1;
                     let right = self.parse_unary()?;
-                    Ok(Expression::Binary(
+                    expr = Expression::Binary(
                         BinaryOperator::from(&x.token_type)?,
                         Box::new(expr),
                         Box::new(right),
-                    ))
+                    );
                 }
-                _ => Ok(expr),
-            },
-            None => return Err(String::from("No more tokens at factor")),
+                _ => return Ok(expr),
+            }
         }
+        Ok(expr)
     }
     fn parse_unary(&mut self) -> Result<Expression, String> {
         match self.tokens.get(self.current_node) {
