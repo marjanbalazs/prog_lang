@@ -34,7 +34,6 @@ pub enum TokenType {
     Fun,
     For,
     If,
-    Nil,
     Or,
     Print,
     Return,
@@ -81,7 +80,6 @@ impl<'v> Scanner<'v> {
                 keywords.insert("fun", TokenType::Fun);
                 keywords.insert("for", TokenType::For);
                 keywords.insert("if", TokenType::If);
-                keywords.insert("nil", TokenType::Nil);
                 keywords.insert("or", TokenType::Or);
                 keywords.insert("print", TokenType::Print);
                 keywords.insert("return", TokenType::Return);

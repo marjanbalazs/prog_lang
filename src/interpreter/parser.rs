@@ -33,6 +33,9 @@ impl<'a> Parser<'a> {
             }
         }
     }
+    pub fn get_ast(&self) -> &Box<Expression> {
+        &self.tree.as_ref().unwrap()
+    }
     fn parse_expr(&mut self) -> Result<Expression, String> {
         self.parse_equality()
     }
@@ -137,15 +140,14 @@ impl<'a> Parser<'a> {
             Some(x) => match &x.token_type {
                 TokenType::String(f) => Expression::Literal(LiteralType::String(f.to_owned())),
                 TokenType::Number(n) => Expression::Literal(LiteralType::Number(*n)),
-                TokenType::True => Expression::Literal(LiteralType::True),
-                TokenType::False => Expression::Literal(LiteralType::False),
-                TokenType::Nil => Expression::Literal(LiteralType::Nil),
+                TokenType::True => Expression::Literal(LiteralType::Boolean(true)),
+                TokenType::False => Expression::Literal(LiteralType::Boolean(true)),
                 TokenType::LeftParen => {
                     self.current_node += 1;
-                    let e = self.parse_expr()?;
+                    let expr = self.parse_expr()?;
                     match self.tokens.get(self.current_node) {
                         Some(c) => match c.token_type {
-                            TokenType::RightParen => {}
+                            TokenType::RightParen => Expression::Grouping(Box::new(expr)),
                             _ => {
                                 return Err(String::from(
                                     "Unexpected token in palce of parentheses",
@@ -154,7 +156,6 @@ impl<'a> Parser<'a> {
                         },
                         None => return Err(String::from("Unmatched parentheses")),
                     }
-                    e
                 }
                 _ => {
                     return Err(String::from("Unexpected token at parsing literal"));
@@ -168,27 +169,25 @@ impl<'a> Parser<'a> {
 }
 
 #[derive(Debug)]
-enum Expression {
+pub enum Expression {
     Literal(LiteralType),
     Unary(UnaryOperator, Box<Expression>),
     Binary(BinaryOperator, Box<Expression>, Box<Expression>),
-    Grouping(GroupingOperator, Box<Expression>),
+    Grouping(Box<Expression>),
 }
 #[derive(Debug)]
-enum LiteralType {
+pub enum LiteralType {
     Number(f64),
     String(String),
-    True,
-    False,
-    Nil,
+    Boolean(bool),
 }
 #[derive(Debug)]
-enum UnaryOperator {
+pub enum UnaryOperator {
     Bang,
     Negation,
 }
 #[derive(Debug)]
-enum BinaryOperator {
+pub enum BinaryOperator {
     Plus,
     Minus,
     Star,
@@ -231,10 +230,4 @@ impl BinaryOperator {
         };
         Ok(ret)
     }
-}
-
-#[derive(Debug)]
-enum GroupingOperator {
-    LeftBrace,
-    RightBrace,
 }
