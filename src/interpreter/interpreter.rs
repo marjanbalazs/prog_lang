@@ -1,5 +1,9 @@
-use super::parser::{BinaryOperator, Expression, LiteralType, UnaryOperator};
+use std::ops::Deref;
+
+use super::parser::{BinaryOperator, Decl, Expression, LiteralType, Statement, UnaryOperator};
 trait Visitor {
+    fn visit_decl(&mut self, expr: &Decl) -> Result<(), String>;
+    fn visit_stmt(&self, expr: &Statement) -> Result<(), String>;
     fn visit_expr(&self, expr: &Expression) -> Result<Value, String>;
 }
 
@@ -11,19 +15,21 @@ enum Value {
 }
 
 pub struct Interpreter<'a> {
-    ast: &'a Box<Expression>,
+    ast: &'a Vec<Decl>,
+    vars: Vec<(String, Value)>,
 }
 
 impl<'a> Interpreter<'a> {
-    pub fn new(ast: &Box<Expression>) -> Interpreter {
-        Interpreter { ast }
+    pub fn new(ast: &Vec<Decl>) -> Interpreter {
+        Interpreter {
+            ast,
+            vars: Vec::new(),
+        }
     }
-    pub fn interpret(&self) {
-        let f = self.visit_expr(self.ast);
+    pub fn interpret(&mut self) {
+        let f = self.visit_decl(&self.ast[0]);
         match f {
-            Ok(val) => {
-                println!("{:?}", val)
-            }
+            Ok(_) => {}
             Err(e) => {
                 println!("Error: {}", e)
             }
@@ -32,6 +38,33 @@ impl<'a> Interpreter<'a> {
 }
 
 impl<'a> Visitor for Interpreter<'a> {
+    fn visit_decl(&mut self, decl: &Decl) -> Result<(), String> {
+        match decl {
+            Decl::Var(ident, expr) => match expr.deref() {
+                Some(e) => {
+                    let val = self.visit_expr(e)?;
+                    self.vars.push((ident.to_owned(), val));
+                    println!("{:?}", self.vars.last().unwrap());
+                    Ok(()) 
+                }
+                None => Ok(()),
+            },
+            Decl::Statement(stmt) => self.visit_stmt(stmt),
+        }
+    }
+    fn visit_stmt(&self, stmt: &Statement) -> Result<(), String> {
+        match stmt {
+            Statement::Print(expr) => {
+                let val = self.visit_expr(expr)?;
+                println!("{:?}", val);
+            }
+            Statement::Expr(expr) => {
+                let f = self.visit_expr(expr)?;
+                println!("{:?}", f);
+            }
+        }
+        Ok(())
+    }
     fn visit_expr(&self, expr: &Expression) -> Result<Value, String> {
         match expr {
             Expression::Literal(x) => match x {
@@ -93,6 +126,7 @@ impl<'a> Visitor for Interpreter<'a> {
                         ),
                         (Value::String(left), Value::String(right)) => match op {
                             BinaryOperator::Plus => Ok(Value::String(String::from(left + &right))),
+                            BinaryOperator::EqualEqual => Ok(Value::Boolean(left == right)),
                             _ => Err("Unknown operator on String types".to_owned()),
                         },
                         (Value::String(_), Value::Boolean(_)) => Err(

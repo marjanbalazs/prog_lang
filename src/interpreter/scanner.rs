@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum TokenType {
     LeftParen,
     RightParen,
@@ -90,6 +90,11 @@ impl<'v> Scanner<'v> {
                 keywords.insert("while", TokenType::While);
                 keywords
             },
+        }
+    }
+    pub fn print(&self) {
+        for x in self.tokens.iter() {
+            print!("{:?}", x.token_type);
         }
     }
     fn peek_char(&self, idx: usize) -> Option<char> {

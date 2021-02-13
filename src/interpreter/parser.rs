@@ -1,6 +1,6 @@
 use super::scanner::{Token, TokenType};
 pub struct Parser<'a> {
-    tree: Option<Box<Expression>>,
+    tree: Vec<Decl>,
     current_node: usize,
     tokens: &'a Vec<Token>,
 }
@@ -8,7 +8,7 @@ pub struct Parser<'a> {
 impl<'a> Parser<'a> {
     pub fn new(tokens: &Vec<Token>) -> Parser {
         Parser {
-            tree: None,
+            tree: Vec::new(),
             current_node: 0,
             tokens,
         }
@@ -16,25 +16,105 @@ impl<'a> Parser<'a> {
     fn print_error(&self, e: &str) {
         let curr_line = self.tokens[self.current_node].line;
         let curr_pos = self.tokens[self.current_node].char_pos;
+        let token = &self.tokens[self.current_node].token_type;
         println!(
-            "Error at line: {} at pos {}. Message: {}",
-            curr_line, curr_pos, e
+            "Error at line: {} at pos {}. Message: {} Token: {:?}",
+            curr_line, curr_pos, e, token
         )
     }
-    pub fn print(&self) {
-        println!("{:?}", self.tree);
+    pub fn get_ast(&self) -> &Vec<Decl> {
+        &self.tree
     }
-    pub fn build_ast(&mut self) {
-        self.tree = match self.parse_expr() {
-            Ok(x) => Some(Box::new(x)),
-            Err(e) => {
-                self.print_error(&e);
-                None
-            }
+    pub fn print(&self) {
+        for token in self.tree.iter() {
+            print!("{:?}", token);
         }
     }
-    pub fn get_ast(&self) -> &Box<Expression> {
-        &self.tree.as_ref().unwrap()
+    pub fn parse_program(&mut self) -> Result<(), String> {
+        while let Some(token) = self.tokens.get(self.current_node) {
+            match token.token_type {
+                TokenType::Eof => break,
+                _ => {
+                    // Start the chain
+                    let decl = self.parse_decl()?;
+                    self.tree.push(decl);
+                }
+            }
+        }
+        Ok(())
+    }
+    fn parse_decl(&mut self) -> Result<Decl, String> {
+        match self.tokens.get(self.current_node) {
+            Some(tok) => match tok.token_type {
+                TokenType::Var => {
+                    self.current_node += 1;
+                    let (ident, expr) = self.parse_var()?;
+                    Ok(Decl::Var(ident, Box::new(expr)))
+                }
+                _ => {
+                    // Assume a statement
+                    let stmt = self.parse_stmt()?;
+                    Ok(Decl::Statement(Box::new(stmt)))
+                }
+            },
+            _ => Err("Impossible".to_owned()),
+        }
+    }
+    fn parse_var(&mut self) -> Result<(String, Option<Expression>), String> {
+        // Identifier
+        let ident = match self.tokens.get(self.current_node) {
+            Some(token) => match &token.token_type {
+                TokenType::Identifier(s) => s.to_owned(),
+                _ => return Err("Expected identifier after keyword Var".to_owned()),
+            },
+            None => return Err("Unexpected end of tokens".to_owned()),
+        };
+        // Initializer
+        self.current_node += 1;
+        let expr = match self.tokens.get(self.current_node) {
+            Some(token) => match token.token_type {
+                TokenType::Equal => {
+                    self.current_node += 1;
+                    self.parse_expr()?
+                }
+                TokenType::Semicolon => return Ok((ident, None)),
+                _ => return Err("Unexpected token after declaration".to_owned()),
+            },
+            None => return Err("Unexpected end of tokens".to_owned()),
+        };
+        // Semicolon,
+        match self.tokens.get(self.current_node) {
+            Some(token) => match token.token_type {
+                TokenType::Semicolon => {
+                    self.current_node += 1;
+                    Ok((ident, Some(expr)))
+                }
+                _ => {
+                    self.print_error("Semicolon expected after declaration");
+                    Err("Semicolon expected after declaration".to_owned())
+                }
+            },
+            None => Err("Unexpected end of tokens".to_owned()),
+        }
+    }
+    fn parse_stmt(&mut self) -> Result<Statement, String> {
+        match self.tokens.get(self.current_node) {
+            Some(tok) => {
+                match tok.token_type {
+                    TokenType::Print => {
+                        self.current_node += 1;
+                        let expr = self.parse_expr()?;
+                        Ok(Statement::Print(Box::new(expr)))
+                    }
+                    _ => {
+                        // Assume expression
+                        let expr = self.parse_expr()?;
+                        Ok(Statement::Expr(Box::new(expr)))
+                    }
+                }
+            }
+            _ => Err("Impossible".to_owned()),
+        }
     }
     fn parse_expr(&mut self) -> Result<Expression, String> {
         self.parse_equality()
@@ -158,6 +238,7 @@ impl<'a> Parser<'a> {
                     }
                 }
                 _ => {
+                    println!("Unexpected token: {:?}", x.token_type);
                     return Err(String::from("Unexpected token at parsing literal"));
                 }
             },
@@ -166,6 +247,17 @@ impl<'a> Parser<'a> {
         self.current_node += 1;
         Ok(literal)
     }
+}
+
+#[derive(Debug)]
+pub enum Decl {
+    Var(String, Box<Option<Expression>>),
+    Statement(Box<Statement>),
+}
+#[derive(Debug)]
+pub enum Statement {
+    Print(Box<Expression>),
+    Expr(Box<Expression>),
 }
 
 #[derive(Debug)]
