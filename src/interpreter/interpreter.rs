@@ -1,13 +1,52 @@
 use std::ops::Deref;
 
 use super::parser::{BinaryOperator, Decl, Expression, LiteralType, Statement, UnaryOperator};
+
+struct Environment <'a> {
+    parent: &'a Option<Environment <'a>>,
+    vars: Vec<(String, Value)>,
+}
+
+impl <'a> Environment <'a> {
+    pub fn new(parent: &'a Option<Environment>) -> Environment <'a> {
+        Environment {
+            parent,
+            vars: Vec::new(),
+        }
+    }
+    pub fn get(&self, ident: &String) -> Option<&Value> {
+        let f = self.vars.iter().find(|(s,v)| s == ident);
+        let val = match f {
+            Some((ident, val)) => Some(val),
+            None => match self.parent {
+                Some(parent) => parent.get(ident),
+                None => None
+            }
+        };
+        val
+    }
+    pub fn set(&mut self, ident: &String, value: Value) -> Result<(), String> {
+        let f = self.vars.iter().position(|(s, val)| s == ident);
+        match f {
+            Some(i) => {
+                self.vars[i] =  (ident.to_string(), value);
+                Ok(())
+            },
+            None => match self.parent {
+                Some(parent) => parent.set(ident, value),
+                None => Err("Lookup failed".to_owned())
+            }
+        }
+    }
+}
+
 trait Visitor {
     fn visit_decl(&mut self, expr: &Decl) -> Result<(), String>;
     fn visit_stmt(&self, expr: &Statement) -> Result<(), String>;
     fn visit_expr(&self, expr: &Expression) -> Result<Value, String>;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Value {
     Number(f64),
     String(String),
@@ -151,6 +190,7 @@ impl<'a> Visitor for Interpreter<'a> {
                 }
             }
             Expression::Grouping(x) => self.visit_expr(x),
+            _ => Ok(())
         }
     }
 }

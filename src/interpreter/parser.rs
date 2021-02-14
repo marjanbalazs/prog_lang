@@ -222,6 +222,7 @@ impl<'a> Parser<'a> {
                 TokenType::Number(n) => Expression::Literal(LiteralType::Number(*n)),
                 TokenType::True => Expression::Literal(LiteralType::Boolean(true)),
                 TokenType::False => Expression::Literal(LiteralType::Boolean(true)),
+                TokenType::Identifier(s) => Expression::Variable(s.to_owned()),
                 TokenType::LeftParen => {
                     self.current_node += 1;
                     let expr = self.parse_expr()?;
@@ -263,6 +264,7 @@ pub enum Statement {
 #[derive(Debug)]
 pub enum Expression {
     Literal(LiteralType),
+    Variable(String),
     Unary(UnaryOperator, Box<Expression>),
     Binary(BinaryOperator, Box<Expression>, Box<Expression>),
     Grouping(Box<Expression>),
