@@ -6,7 +6,6 @@ mod interpreter;
 
 struct Command {
     cmd: &'static str,
-    args: u32,
 }
 
 fn get_directory_content() -> String {
@@ -70,20 +69,11 @@ fn dispatch(arg: &str, commands: &[Command]) {
 
 fn main() -> io::Result<()> {
     let commands = vec![
-        Command { cmd: "cd", args: 1 },
-        Command {
-            cmd: "pwd",
-            args: 0,
-        },
-        Command { cmd: "ls", args: 0 },
-        Command {
-            cmd: "script",
-            args: 0,
-        },
-        Command {
-            cmd: "run",
-            args: 1,
-        },
+        Command { cmd: "cd" },
+        Command { cmd: "pwd" },
+        Command { cmd: "ls" },
+        Command { cmd: "script" },
+        Command { cmd: "run" },
     ];
 
     let mut line: String = String::new();

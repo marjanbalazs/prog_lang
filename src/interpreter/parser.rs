@@ -1,3 +1,5 @@
+use std::format;
+
 use super::scanner::{Token, TokenType};
 pub struct Parser<'a> {
     tree: Vec<Decl>,
@@ -28,6 +30,25 @@ impl<'a> Parser<'a> {
     pub fn print(&self) {
         for token in self.tree.iter() {
             print!("{:?}", token);
+        }
+    }
+    fn match_next_token(&mut self, token_to_match: &TokenType) -> Result<(), String> {
+        match self.tokens.get(self.current_node) {
+            Some(token) => {
+                let token_type = &token.token_type;
+
+                if token_type == token_to_match {
+                    self.current_node += 1;
+                    Ok(())
+                } else {
+                    let err = format!(
+                        "Expected token: {:?}, found: {:?}",
+                        token_to_match, token_type
+                    );
+                    Err(err)
+                }
+            }
+            None => Err("No token found".to_owned()),
         }
     }
     pub fn parse_program(&mut self) -> Result<(), String> {
@@ -82,19 +103,10 @@ impl<'a> Parser<'a> {
             },
             None => return Err("Unexpected end of tokens".to_owned()),
         };
-        // Semicolon,
-        match self.tokens.get(self.current_node) {
-            Some(token) => match token.token_type {
-                TokenType::Semicolon => {
-                    self.current_node += 1;
-                    Ok((ident, Some(expr)))
-                }
-                _ => {
-                    self.print_error("Semicolon expected after declaration");
-                    Err("Semicolon expected after declaration".to_owned())
-                }
-            },
-            None => Err("Unexpected end of tokens".to_owned()),
+        // Semicolon
+        match self.match_next_token(&TokenType::Semicolon) {
+            Ok(_) => Ok((ident, Some(expr))),
+            Err(err) => Err(err),
         }
     }
     fn parse_stmt(&mut self) -> Result<Statement, String> {
@@ -104,11 +116,18 @@ impl<'a> Parser<'a> {
                     TokenType::Print => {
                         self.current_node += 1;
                         let expr = self.parse_expr()?;
+                        self.match_next_token(&TokenType::Semicolon)?;
                         Ok(Statement::Print(Box::new(expr)))
-                    }
+                    },
+                    TokenType::LeftBrace => {
+                        self.current_node += 1;
+                        let block = self.parse_block()?;
+                        Ok(Statement::Block(block))
+                    },
                     _ => {
                         // Assume expression
                         let expr = self.parse_expr()?;
+                        self.match_next_token(&TokenType::Semicolon)?;
                         Ok(Statement::Expr(Box::new(expr)))
                     }
                 }
@@ -116,8 +135,45 @@ impl<'a> Parser<'a> {
             _ => Err("Impossible".to_owned()),
         }
     }
+    fn parse_block(&mut self) -> Result<Vec<Decl>, String> {
+        let mut stmts: Vec<Decl> = Vec::new();
+        while let Some(x) = self.tokens.get(self.current_node) {
+            match x.token_type {
+                TokenType::RightBrace => return Ok(stmts),
+                _ => {
+                    let decl = self.parse_decl()?;
+                    stmts.push(decl);
+                    self.current_node += 1;
+                }
+            }
+        }
+        println!{"{:?}", stmts};
+        Ok(stmts)
+    }
     fn parse_expr(&mut self) -> Result<Expression, String> {
-        self.parse_equality()
+        self.parse_assignment()
+    }
+    fn parse_assignment(&mut self) -> Result<Expression, String> {
+        let expr = self.parse_equality()?;
+
+        match self.tokens.get(self.current_node) {
+            Some(token) => match token.token_type {
+                TokenType::Equal => {
+                    self.current_node += 1;
+                    let value = self.parse_assignment()?;
+                    match expr {
+                        Expression::Variable(name) => {
+                            Ok(Expression::Assignment(name, Box::new(value)))
+                        }
+                        _ => {
+                            Err("Expected variable at the left hand side of assignment".to_owned())
+                        }
+                    }
+                }
+                _ => Ok(expr),
+            },
+            None => Err("Unexpected end of tokens".to_owned()),
+        }
     }
     fn parse_equality(&mut self) -> Result<Expression, String> {
         let mut expr = self.parse_comparison()?;
@@ -205,14 +261,14 @@ impl<'a> Parser<'a> {
                 TokenType::Bang | TokenType::Minus => {
                     self.current_node += 1;
                     let right = self.parse_unary()?;
-                    return Ok(Expression::Unary(
+                    Ok(Expression::Unary(
                         UnaryOperator::from(&x.token_type)?,
                         Box::new(right),
-                    ));
+                    ))
                 }
                 _ => self.parse_primary(),
             },
-            None => return Err(String::from("No more tokens at unary")),
+            None => Err("No more tokens at unary".to_owned()),
         }
     }
     fn parse_primary(&mut self) -> Result<Expression, String> {
@@ -259,12 +315,14 @@ pub enum Decl {
 pub enum Statement {
     Print(Box<Expression>),
     Expr(Box<Expression>),
+    Block(Vec<Decl>)
 }
 
 #[derive(Debug)]
 pub enum Expression {
     Literal(LiteralType),
     Variable(String),
+    Assignment(String, Box<Expression>),
     Unary(UnaryOperator, Box<Expression>),
     Binary(BinaryOperator, Box<Expression>, Box<Expression>),
     Grouping(Box<Expression>),
@@ -286,7 +344,6 @@ pub enum BinaryOperator {
     Minus,
     Star,
     Slash,
-    Equal,
     BangEqual,
     EqualEqual,
     Greater,
@@ -311,7 +368,6 @@ impl BinaryOperator {
         let ret = match token {
             TokenType::Plus => BinaryOperator::Plus,
             TokenType::Minus => BinaryOperator::Minus,
-            TokenType::Equal => BinaryOperator::Equal,
             TokenType::Star => BinaryOperator::Star,
             TokenType::Slash => BinaryOperator::Slash,
             TokenType::BangEqual => BinaryOperator::BangEqual,
