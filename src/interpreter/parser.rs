@@ -36,9 +36,7 @@ impl<'a> Parser<'a> {
         match self.tokens.get(self.current_node) {
             Some(token) => {
                 let token_type = &token.token_type;
-
                 if token_type == token_to_match {
-                    self.current_node += 1;
                     Ok(())
                 } else {
                     let err = format!(
@@ -104,8 +102,13 @@ impl<'a> Parser<'a> {
             None => return Err("Unexpected end of tokens".to_owned()),
         };
         // Semicolon
+        println!("match semicolon");
         match self.match_next_token(&TokenType::Semicolon) {
-            Ok(_) => Ok((ident, Some(expr))),
+            Ok(_) => {
+                self.current_node += 1;
+                Ok((ident, Some(expr)))
+
+            },
             Err(err) => Err(err),
         }
     }
@@ -116,7 +119,9 @@ impl<'a> Parser<'a> {
                     TokenType::Print => {
                         self.current_node += 1;
                         let expr = self.parse_expr()?;
+                        println!("Print");
                         self.match_next_token(&TokenType::Semicolon)?;
+                        self.current_node += 1;
                         Ok(Statement::Print(Box::new(expr)))
                     },
                     TokenType::LeftBrace => {
@@ -139,15 +144,20 @@ impl<'a> Parser<'a> {
         let mut stmts: Vec<Decl> = Vec::new();
         while let Some(x) = self.tokens.get(self.current_node) {
             match x.token_type {
-                TokenType::RightBrace => return Ok(stmts),
+                TokenType::RightBrace => {
+                    println!("RightBrace");
+                    self.current_node += 1;
+                    return Ok(stmts);
+                }
                 _ => {
+                    println!("{:?}", x);
                     let decl = self.parse_decl()?;
+                    println!("{:?}", decl);
                     stmts.push(decl);
                     self.current_node += 1;
                 }
             }
         }
-        println!{"{:?}", stmts};
         Ok(stmts)
     }
     fn parse_expr(&mut self) -> Result<Expression, String> {

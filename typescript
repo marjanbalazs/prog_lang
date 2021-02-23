@@ -1,0 +1,43 @@
+Script started on 2021-02-23 22:17:32+01:00 [TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="80" LINES="24"]
+[1m[7m%[27m[1m[0m                                                                                ]2;balazs@balazs-desktop:~/Work/lang]1;~/Work/lang[0m[27m[24m[J[01;32m➜  [36mlang[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004hccdc  lls[?1l>[?2004l
+]2;ls --color=tty]1;lsCargo.lock  Cargo.toml  README.md  [0m[01;34msrc[0m  [01;34mtarget[0m  typescript
+[1m[7m%[27m[1m[0m                                                                                ]2;balazs@balazs-desktop:~/Work/lang]1;~/Work/lang[0m[27m[24m[J[01;32m➜  [36mlang[00m [01;34mgit:([31mmaster[34m) [33m✗[00m [K[?1h=[?2004hc ccargo run --lre   release[?1l>[?2004l
+]2;cargo run --release]1;cargo[0m[0m[1m[32m   Compiling[0m proglang v0.1.0 (/home/balazs/Work/lang)
+[0m[0m[1m[36m    Building[0m [===================================================>       ] 8/9[K[0m[1m[33mwarning[0m[0m[1m: associated function is never used: `print_error`[0m
+[0m  [0m[0m[1m[38;5;12m--> [0m[0msrc/interpreter/parser.rs:18:8[0m
+[0m   [0m[0m[1m[38;5;12m|[0m
+[0m[1m[38;5;12m18[0m[0m [0m[0m[1m[38;5;12m| [0m[0m    fn print_error(&self, e: &str) {[0m
+[0m   [0m[0m[1m[38;5;12m| [0m[0m       [0m[0m[1m[33m^^^^^^^^^^^[0m
+[0m   [0m[0m[1m[38;5;12m|[0m
+[0m   [0m[0m[1m[38;5;12m= [0m[0m[1mnote[0m[0m: `#[warn(dead_code)]` on by default[0m
+
+[0m[0m[1m[36m    Building[0m [===================================================>       ] 8/9[K[0m[1m[33mwarning[0m[0m[1m: associated function is never used: `print`[0m
+[0m  [0m[0m[1m[38;5;12m--> [0m[0msrc/interpreter/parser.rs:30:12[0m
+[0m   [0m[0m[1m[38;5;12m|[0m
+[0m[1m[38;5;12m30[0m[0m [0m[0m[1m[38;5;12m| [0m[0m    pub fn print(&self) {[0m
+[0m   [0m[0m[1m[38;5;12m| [0m[0m           [0m[0m[1m[33m^^^^^[0m
+
+[0m[0m[1m[36m    Building[0m [===================================================>       ] 8/9[K[0m[1m[33mwarning[0m[0m[1m: associated function is never used: `print`[0m
+[0m  [0m[0m[1m[38;5;12m--> [0m[0msrc/interpreter/scanner.rs:96:12[0m
+[0m   [0m[0m[1m[38;5;12m|[0m
+[0m[1m[38;5;12m96[0m[0m [0m[0m[1m[38;5;12m| [0m[0m    pub fn print(&self) {[0m
+[0m   [0m[0m[1m[38;5;12m| [0m[0m           [0m[0m[1m[33m^^^^^[0m
+
+[0m[0m[1m[36m    Building[0m [===================================================>       ] 8/9[K[0m[1m[33mwarning[0m[0m[1m: unused `std::result::Result` that must be used[0m
+[0m  [0m[0m[1m[38;5;12m--> [0m[0msrc/interpreter/mod.rs:17:5[0m
+[0m   [0m[0m[1m[38;5;12m|[0m
+[0m[1m[38;5;12m17[0m[0m [0m[0m[1m[38;5;12m| [0m[0m    parser.parse_program();[0m
+[0m   [0m[0m[1m[38;5;12m| [0m[0m    [0m[0m[1m[33m^^^^^^^^^^^^^^^^^^^^^^^[0m
+[0m   [0m[0m[1m[38;5;12m|[0m
+[0m   [0m[0m[1m[38;5;12m= [0m[0m[1mnote[0m[0m: `#[warn(unused_must_use)]` on by default[0m
+[0m   [0m[0m[1m[38;5;12m= [0m[0m[1mnote[0m[0m: this `Result` may be an `Err` variant, which should be handled[0m
+
+[0m[0m[1m[36m    Building[0m [===================================================>       ] 8/9[K[0m[1m[33mwarning[0m[0m[1m: unused `std::result::Result` that must be used[0m
+[0m   [0m[0m[1m[38;5;12m--> [0m[0msrc/interpreter/interpreter.rs:155:21[0m
+[0m    [0m[0m[1m[38;5;12m|[0m
+[0m[1m[38;5;12m155[0m[0m [0m[0m[1m[38;5;12m| [0m[0m                    self.env.decl_arg(ident, Some(val));[0m
+[0m    [0m[0m[1m[38;5;12m| [0m[0m                    [0m[0m[1m[33m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+[0m    [0m[0m[1m[38;5;12m|[0m
+[0m    [0m[0m[1m[38;5;12m= [0m[0m[1mnote[0m[0m: this `Result` may be an `Err` variant, which should be handled[0m
+
+[0m[0m[1m[36m    Building[0m [===================================================>       ] 8/9[K[0m[1m[

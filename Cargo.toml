@@ -1,5 +1,5 @@
 [package]
-name = "shell"
+name = "proglang"
 version = "0.1.0"
 authors = ["Balazs Marjan <balazs.marjan@outlook.com>"]
 edition = "2018"

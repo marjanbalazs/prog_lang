@@ -46,6 +46,7 @@ pub enum TokenType {
     Eof,
 }
 
+#[derive(Debug)]
 pub struct Token {
     pub line: usize,
     pub char_pos: usize,

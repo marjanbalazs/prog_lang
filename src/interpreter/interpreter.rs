@@ -2,6 +2,7 @@ use std::ops::{Deref, IndexMut};
 
 use super::parser::{BinaryOperator, Decl, Expression, LiteralType, Statement, UnaryOperator};
 
+#[derive(Debug)]
 pub struct EnvBlock {
     parent_block: Option<usize>,
     vars: Vec<(String, Option<Value>)>,
@@ -102,8 +103,8 @@ impl Environment {
     }
 
     fn drop_block(&mut self) {
+        self.current_scope = self.blocks.get(self.current_scope).unwrap().parent_block.unwrap();
         self.blocks.pop();
-        ()
     }
 }
 
