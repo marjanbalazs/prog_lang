@@ -102,7 +102,6 @@ impl<'a> Parser<'a> {
             None => return Err("Unexpected end of tokens".to_owned()),
         };
         // Semicolon
-        println!("match semicolon");
         match self.match_next_token(&TokenType::Semicolon) {
             Ok(_) => {
                 self.current_node += 1;
@@ -119,7 +118,6 @@ impl<'a> Parser<'a> {
                     TokenType::Print => {
                         self.current_node += 1;
                         let expr = self.parse_expr()?;
-                        println!("Print");
                         self.match_next_token(&TokenType::Semicolon)?;
                         self.current_node += 1;
                         Ok(Statement::Print(Box::new(expr)))
@@ -145,14 +143,11 @@ impl<'a> Parser<'a> {
         while let Some(x) = self.tokens.get(self.current_node) {
             match x.token_type {
                 TokenType::RightBrace => {
-                    println!("RightBrace");
                     self.current_node += 1;
                     return Ok(stmts);
                 }
                 _ => {
-                    println!("{:?}", x);
                     let decl = self.parse_decl()?;
-                    println!("{:?}", decl);
                     stmts.push(decl);
                     self.current_node += 1;
                 }
