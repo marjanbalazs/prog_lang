@@ -99,11 +99,13 @@ impl Environment {
                 vars: Vec::new()
             }
         });
+        println!("Opened block");
         self.current_scope = self.blocks.len() - 1;
     }
 
     fn drop_block(&mut self) {
         self.current_scope = self.blocks.get(self.current_scope).unwrap().parent_block.unwrap();
+        println!("Dropped block");
         self.blocks.pop();
     }
 }

@@ -27,11 +27,6 @@ impl<'a> Parser<'a> {
     pub fn get_ast(&self) -> &Vec<Decl> {
         &self.tree
     }
-    pub fn print(&self) {
-        for token in self.tree.iter() {
-            print!("{:?}", token);
-        }
-    }
     fn match_next_token(&mut self, token_to_match: &TokenType) -> Result<(), String> {
         match self.tokens.get(self.current_node) {
             Some(token) => {
@@ -60,6 +55,7 @@ impl<'a> Parser<'a> {
                 }
             }
         }
+        println!("{:?}", self.tree);
         Ok(())
     }
     fn parse_decl(&mut self) -> Result<Decl, String> {
@@ -140,16 +136,17 @@ impl<'a> Parser<'a> {
     }
     fn parse_block(&mut self) -> Result<Vec<Decl>, String> {
         let mut stmts: Vec<Decl> = Vec::new();
+        println!("Parsing block");
         while let Some(x) = self.tokens.get(self.current_node) {
             match x.token_type {
                 TokenType::RightBrace => {
                     self.current_node += 1;
+                    println!("Right brace");
                     return Ok(stmts);
                 }
                 _ => {
                     let decl = self.parse_decl()?;
                     stmts.push(decl);
-                    self.current_node += 1;
                 }
             }
         }
@@ -300,7 +297,7 @@ impl<'a> Parser<'a> {
                     }
                 }
                 _ => {
-                    println!("Unexpected token: {:?}", x.token_type);
+                    println!("Unexpected token: {:?} {:?} {:?}", x, x.token_type, self.tree);
                     return Err(String::from("Unexpected token at parsing literal"));
                 }
             },

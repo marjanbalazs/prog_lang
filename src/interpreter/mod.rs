@@ -14,7 +14,12 @@ pub fn run_script(code: &str) {
     let mut scanner = Scanner::new(code, &mut tokens);
     scanner.scan_tokens();
     let mut parser = Parser::new(&tokens);
-    parser.parse_program();
+    match parser.parse_program() {
+        Ok(_) => {}
+        Err(e) => {
+            println!("{:?}", e)
+        }
+    }
     let mut interpreter = Interpreter::new(parser.get_ast());
     interpreter.interpret();
 }
