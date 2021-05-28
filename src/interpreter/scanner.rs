@@ -270,6 +270,5 @@ impl<'v> Scanner<'v> {
             }
         }
         self.tokens.push(self.create_token(TokenType::Eof));
-        println!("{:?}", self.tokens);
     }
 }

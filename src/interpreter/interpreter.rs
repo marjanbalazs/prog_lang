@@ -99,20 +99,18 @@ impl Environment {
                 vars: Vec::new()
             }
         });
-        println!("Opened block");
         self.current_scope = self.blocks.len() - 1;
     }
 
     fn drop_block(&mut self) {
         self.current_scope = self.blocks.get(self.current_scope).unwrap().parent_block.unwrap();
-        println!("Dropped block");
         self.blocks.pop();
     }
 }
 
 trait Visitor {
     fn visit_decl(&mut self, expr: &Decl) -> Result<(), String>;
-    fn visit_stmt(&mut self, expr: &Statement) -> Result<(), String>;
+    fn visit_stmt(&mut self, expr: &Statement) -> Result<Option<Value>, String>;
     fn visit_expr(&mut self, expr: &Expression) -> Result<Value, String>;
 }
 
@@ -165,15 +163,15 @@ impl<'a, 'b> Visitor for Interpreter<'a> {
             Decl::Statement(stmt) => self.visit_stmt(stmt),
         }
     }
-    fn visit_stmt(&mut self, stmt: &Statement) -> Result<(), String> {
+    fn visit_stmt(&mut self, stmt: &Statement) -> Result<Option<Value>, String> {
         match stmt {
             Statement::Print(expr) => {
                 let val = self.visit_expr(expr)?;
                 println!("{:?}", val);
             }
             Statement::Expr(expr) => {
-                let val = self.visit_expr(expr)?;
-                println!("{:?}", val);
+                let v = self.visit_expr(expr)?;
+                return Ok(Some(v))
             }
             Statement::Block(block) => {
                 self.env.new_block();
@@ -182,8 +180,21 @@ impl<'a, 'b> Visitor for Interpreter<'a> {
                 }
                 self.env.drop_block();
             }
+            Statement::If(condition, statement , _) => {
+                let v = self.visit_expr(condition)?;
+                match v {
+                    Value::Number(_) => {}
+                    Value::String(_) => {}
+                    Value::Boolean(cond) => {
+                        if cond {
+                            self.visit_decl(statement)?;
+                        }
+                    }
+                }
+                return Ok(None)
+            }
         }
-        Ok(())
+        Ok(None)
     }
     fn visit_expr(&mut self, expr: &Expression) -> Result<Value, String> {
         match expr {

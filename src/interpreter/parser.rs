@@ -55,7 +55,6 @@ impl<'a> Parser<'a> {
                 }
             }
         }
-        println!("{:?}", self.tree);
         Ok(())
     }
     fn parse_decl(&mut self) -> Result<Decl, String> {
@@ -123,6 +122,16 @@ impl<'a> Parser<'a> {
                         let block = self.parse_block()?;
                         Ok(Statement::Block(block))
                     },
+                    TokenType::If => {
+                        self.current_node += 1;
+                        self.match_next_token(&TokenType::LeftParen)?;
+                        self.current_node += 1;
+                        let condition = self.parse_expr()?;
+                        self.match_next_token(&TokenType::RightParen)?;
+                        self.current_node += 1;
+                        let statement = self.parse_decl()?;
+                        Ok(Statement::If(Box::new(condition), Box::new(statement), None))
+                    },
                     _ => {
                         // Assume expression
                         let expr = self.parse_expr()?;
@@ -136,12 +145,10 @@ impl<'a> Parser<'a> {
     }
     fn parse_block(&mut self) -> Result<Vec<Decl>, String> {
         let mut stmts: Vec<Decl> = Vec::new();
-        println!("Parsing block");
         while let Some(x) = self.tokens.get(self.current_node) {
             match x.token_type {
                 TokenType::RightBrace => {
                     self.current_node += 1;
-                    println!("Right brace");
                     return Ok(stmts);
                 }
                 _ => {
@@ -315,6 +322,7 @@ pub enum Decl {
 }
 #[derive(Debug)]
 pub enum Statement {
+    If(Box<Expression>, Box<Decl>, Option<Box<Decl>>),
     Print(Box<Expression>),
     Expr(Box<Expression>),
     Block(Vec<Decl>)
