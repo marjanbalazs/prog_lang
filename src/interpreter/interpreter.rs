@@ -1,5 +1,4 @@
 use std::ops::{Deref, IndexMut};
-
 use super::parser::{BinaryOperator, Decl, Expression, LiteralType, Statement, UnaryOperator};
 
 #[derive(Debug)]
@@ -152,7 +151,7 @@ impl<'a, 'b> Visitor for Interpreter<'a> {
             Decl::Var(ident, expr) => match expr.deref() {
                 Some(e) => {
                     let val = self.visit_expr(e)?;
-                    self.env.decl_arg(ident, Some(val));
+                    let res = self.env.decl_arg(ident, Some(val));
                     Ok(())
                 }
                 None => {
@@ -160,14 +159,21 @@ impl<'a, 'b> Visitor for Interpreter<'a> {
                     Ok(())
                 }
             },
-            Decl::Statement(stmt) => self.visit_stmt(stmt),
+            Decl::Statement(stmt) => {
+                self.visit_stmt(stmt);
+                Ok(())
+            }
         }
     }
     fn visit_stmt(&mut self, stmt: &Statement) -> Result<Option<Value>, String> {
         match stmt {
             Statement::Print(expr) => {
                 let val = self.visit_expr(expr)?;
-                println!("{:?}", val);
+                match &val {
+                    Value::Number(num) => {println!("{}", *num)}
+                    Value::String(str) => {println!("{}", *str)}
+                    Value::Boolean(bool) => {println!("{}", *bool)}
+                }
             }
             Statement::Expr(expr) => {
                 let v = self.visit_expr(expr)?;
@@ -176,23 +182,53 @@ impl<'a, 'b> Visitor for Interpreter<'a> {
             Statement::Block(block) => {
                 self.env.new_block();
                 for decl in block.iter() {
-                    self.visit_decl(decl);
+                    self.visit_decl(decl)?;
                 }
                 self.env.drop_block();
             }
-            Statement::If(condition, statement , _) => {
+            Statement::If(condition, then_branch , else_branch) => {
                 let v = self.visit_expr(condition)?;
                 match v {
                     Value::Number(_) => {}
                     Value::String(_) => {}
                     Value::Boolean(cond) => {
                         if cond {
-                            self.visit_decl(statement)?;
+                            self.visit_stmt(then_branch)?;
+                        } else {
+                            let k = else_branch.deref();
+                            match k {
+                                Some(stmt) => {
+                                    self.visit_stmt(stmt)?;
+                                }
+                                None => todo!(),
+                            }
                         }
                     }
                 }
                 return Ok(None)
             }
+            Statement::While(cond, then) => {
+                    let v = self.visit_expr(cond)?;
+                    match v {
+                        Value::Number(_) => todo!(),
+                        Value::String(_) => todo!(),
+                        Value::Boolean(c) => {
+                            let mut loop_condition = c;
+                            while loop_condition {
+                                self.visit_stmt(then)?;
+                                loop_condition = match self.visit_expr(cond) {
+                                    Ok(res) => match res {
+                                        Value::Number(_) => todo!(),
+                                        Value::String(_) => todo!(),
+                                        Value::Boolean(e) => e,
+                                    },
+                                    Err(e) => return Err(e),
+                                }
+                            }
+                        },
+                    }
+                return Ok(None)
+            },
         }
         Ok(None)
     }
@@ -235,8 +271,8 @@ impl<'a, 'b> Visitor for Interpreter<'a> {
                             BinaryOperator::Minus => Ok(Value::Number(left - right)),
                             BinaryOperator::Star => Ok(Value::Number(left * right)),
                             BinaryOperator::Slash => Ok(Value::Number(left / right)),
-                            BinaryOperator::BangEqual => Ok(Value::Boolean(left != right)),
-                            BinaryOperator::EqualEqual => Ok(Value::Boolean(left == right)),
+                            BinaryOperator::BangEqual => Ok(Value::Boolean((left - right).abs() > f64::EPSILON)),
+                            BinaryOperator::EqualEqual => Ok(Value::Boolean((left - right).abs() < f64::EPSILON)),
                             BinaryOperator::Greater => Ok(Value::Boolean(left > right)),
                             BinaryOperator::GreaterEqual => Ok(Value::Boolean(left >= right)),
                             BinaryOperator::Less => Ok(Value::Boolean(left < right)),

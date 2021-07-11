@@ -1,5 +1,4 @@
 use std::env::{ args };
-use std::error::Error;
 use std::fs::File;
 use std::io::prelude::*;
 mod interpreter;
@@ -9,7 +8,7 @@ fn main() -> Result<(), String> {
     let file = args.get(1);
     let file_path = match file {
         Some(x) => x,
-        None => return Err("Problems".to_owned()),
+        None => return Err("No file provided".to_owned()),
     };
     let mut file = match File::open(file_path) {
         Ok(file) => file,

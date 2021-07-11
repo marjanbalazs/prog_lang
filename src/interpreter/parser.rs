@@ -1,6 +1,6 @@
 use std::format;
+use super::{scanner::{Token, TokenType}};
 
-use super::scanner::{Token, TokenType};
 pub struct Parser<'a> {
     tree: Vec<Decl>,
     current_node: usize,
@@ -15,28 +15,21 @@ impl<'a> Parser<'a> {
             tokens,
         }
     }
-    fn print_error(&self, e: &str) {
-        let curr_line = self.tokens[self.current_node].line;
-        let curr_pos = self.tokens[self.current_node].char_pos;
-        let token = &self.tokens[self.current_node].token_type;
-        println!(
-            "Error at line: {} at pos {}. Message: {} Token: {:?}",
-            curr_line, curr_pos, e, token
-        )
-    }
     pub fn get_ast(&self) -> &Vec<Decl> {
         &self.tree
     }
     fn match_next_token(&mut self, token_to_match: &TokenType) -> Result<(), String> {
+        self.current_node += 1;
         match self.tokens.get(self.current_node) {
             Some(token) => {
                 let token_type = &token.token_type;
+                let line = &token.line;
                 if token_type == token_to_match {
                     Ok(())
                 } else {
                     let err = format!(
-                        "Expected token: {:?}, found: {:?}",
-                        token_to_match, token_type
+                        "Expected token: {:?}, found: {:?}, line {}",
+                        token_to_match, token_type, line,
                     );
                     Err(err)
                 }
@@ -50,6 +43,7 @@ impl<'a> Parser<'a> {
                 TokenType::Eof => break,
                 _ => {
                     // Start the chain
+                    println!("Top token: {:?}", token);
                     let decl = self.parse_decl()?;
                     self.tree.push(decl);
                 }
@@ -129,12 +123,42 @@ impl<'a> Parser<'a> {
                         let condition = self.parse_expr()?;
                         self.match_next_token(&TokenType::RightParen)?;
                         self.current_node += 1;
-                        let statement = self.parse_decl()?;
-                        Ok(Statement::If(Box::new(condition), Box::new(statement), None))
+                        self.match_next_token(&TokenType::LeftBrace)?;
+                        self.current_node += 1;
+                        let then_block = self.parse_block()?;
+                        let else_block = match self.tokens.get(self.current_node) {
+                            Some(token) => {
+                                match token.token_type {
+                                    TokenType::Else => {
+                                        self.current_node += 1;
+                                        self.match_next_token(&TokenType::LeftBrace)?;
+                                        self.current_node += 1;
+                                        let block = self.parse_block()?;
+                                        Some(Statement::Block(block))                                        
+                                    },
+                                    _ => None,
+                                }
+                            },
+                            None => return Err("Unexpected end of token stream".to_owned())
+                        };
+                        Ok(Statement::If(Box::new(condition), Box::new(Statement::Block(then_block)), Box::new(else_block)))
+                    },
+                    TokenType::While => {
+                        self.current_node += 1;
+                        self.match_next_token(&TokenType::LeftParen)?;
+                        self.current_node += 1;
+                        let condition = self.parse_expr()?;
+                        self.match_next_token(&TokenType::RightParen)?;
+                        self.current_node += 1;
+                        self.match_next_token(&TokenType::LeftBrace)?;
+                        self.current_node += 1;
+                        let then_block = self.parse_block()?;
+                        Ok(Statement::While(Box::new(condition), Box::new(Statement::Block(then_block))))
                     },
                     _ => {
                         // Assume expression
                         let expr = self.parse_expr()?;
+                        println!("Parsed expr {:?}", expr);
                         self.match_next_token(&TokenType::Semicolon)?;
                         Ok(Statement::Expr(Box::new(expr)))
                     }
@@ -168,16 +192,20 @@ impl<'a> Parser<'a> {
         match self.tokens.get(self.current_node) {
             Some(token) => match token.token_type {
                 TokenType::Equal => {
+                    let name = match expr {
+                        Expression::Variable(name) => name,
+                        _ => {
+                            return Err("Expected variable at the left hand side of assignment".to_owned())
+                        }
+                    };
+                    println!("Parsing assigment");
+                    println!("{:?}",token);
                     self.current_node += 1;
                     let value = self.parse_assignment()?;
-                    match expr {
-                        Expression::Variable(name) => {
-                            Ok(Expression::Assignment(name, Box::new(value)))
-                        }
-                        _ => {
-                            Err("Expected variable at the left hand side of assignment".to_owned())
-                        }
-                    }
+                    println!("{:?} {:? }", name, value);
+                    self.match_next_token(&TokenType::Semicolon)?;
+                    self.current_node += 1;
+                    Ok(Expression::Assignment(name, Box::new(value)))
                 }
                 _ => Ok(expr),
             },
@@ -286,7 +314,7 @@ impl<'a> Parser<'a> {
                 TokenType::String(f) => Expression::Literal(LiteralType::String(f.to_owned())),
                 TokenType::Number(n) => Expression::Literal(LiteralType::Number(*n)),
                 TokenType::True => Expression::Literal(LiteralType::Boolean(true)),
-                TokenType::False => Expression::Literal(LiteralType::Boolean(true)),
+                TokenType::False => Expression::Literal(LiteralType::Boolean(false)),
                 TokenType::Identifier(s) => Expression::Variable(s.to_owned()),
                 TokenType::LeftParen => {
                     self.current_node += 1;
@@ -310,7 +338,6 @@ impl<'a> Parser<'a> {
             },
             None => return Err(String::from("Error parsing literal")),
         };
-        self.current_node += 1;
         Ok(literal)
     }
 }
@@ -322,10 +349,11 @@ pub enum Decl {
 }
 #[derive(Debug)]
 pub enum Statement {
-    If(Box<Expression>, Box<Decl>, Option<Box<Decl>>),
-    Print(Box<Expression>),
     Expr(Box<Expression>),
-    Block(Vec<Decl>)
+    If(Box<Expression>, Box<Statement>, Box<Option<Statement>>),
+    While(Box<Expression>, Box<Statement>),
+    Block(Vec<Decl>),
+    Print(Box<Expression>),
 }
 
 #[derive(Debug)]

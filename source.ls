@@ -1,19 +1,27 @@
-var a = "global a";
-var b = "global b";
-var c = "global c";
-{
-  var a = "outer a";
-  var b = "outer b";
-  {
-    var a = "inner a";
-    print a;
-    print b;
-    print c;
-  }
+
+  print "true condition";
+  var a = "123123";
+  var k = 5;
   print a;
-  print b;
-  print c;
+  print k;
+  k = 6;
+  print k;
+  if (true) {
+    print "inner true";
+  }
+  else {
+    print "inner false";
+  }
+  if (false) {
+    print "second inner true";
+  }
+  else {
+    print "second inner false";
+  }
+
 }
-print a;
-print b;
-print c;
+var i = 1;
+while (i < 5) {
+  i = 6;
+}
+  

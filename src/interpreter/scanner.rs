@@ -62,7 +62,7 @@ pub struct Scanner<'v> {
 }
 
 fn print_error(line: usize, what: &str, message: &str) {
-    println!("[line: {}] Error: {}: {}", line, what, message);
+    println!("[line: {}] Error: {}: {}", line + 1, what, message);
 }
 
 impl<'v> Scanner<'v> {
@@ -91,11 +91,6 @@ impl<'v> Scanner<'v> {
                 keywords.insert("while", TokenType::While);
                 keywords
             },
-        }
-    }
-    pub fn print(&self) {
-        for x in self.tokens.iter() {
-            print!("{:?}", x.token_type);
         }
     }
     fn peek_char(&self, idx: usize) -> Option<char> {
@@ -221,15 +216,12 @@ impl<'v> Scanner<'v> {
                                 literal.push(chr);
                                 next_pos = pos + 1;
                             }
-                            Some(c) => match c {
-                                '0'..='9' => {
+                            Some('0'..='9') => {
                                     let (pos, chr) = iter.next().unwrap();
                                     literal.push(chr);
                                     next_pos = pos + 1;
-                                }
-                                _ => break,
                             },
-                            None => break,
+                            _ => break,
                         }
                     }
                     self.tokens.push(
@@ -270,5 +262,9 @@ impl<'v> Scanner<'v> {
             }
         }
         self.tokens.push(self.create_token(TokenType::Eof));
+        for token in self.tokens.iter() {
+            println!("{:?}", token);
+        }
     }
+
 }
