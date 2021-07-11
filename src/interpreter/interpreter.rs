@@ -1,5 +1,5 @@
-use std::ops::{Deref, IndexMut};
 use super::parser::{BinaryOperator, Decl, Expression, LiteralType, Statement, UnaryOperator};
+use std::ops::{Deref, IndexMut};
 
 #[derive(Debug)]
 pub struct EnvBlock {
@@ -95,14 +95,19 @@ impl Environment {
         self.blocks.push({
             EnvBlock {
                 parent_block: Some(self.current_scope),
-                vars: Vec::new()
+                vars: Vec::new(),
             }
         });
         self.current_scope = self.blocks.len() - 1;
     }
 
     fn drop_block(&mut self) {
-        self.current_scope = self.blocks.get(self.current_scope).unwrap().parent_block.unwrap();
+        self.current_scope = self
+            .blocks
+            .get(self.current_scope)
+            .unwrap()
+            .parent_block
+            .unwrap();
         self.blocks.pop();
     }
 }
@@ -170,14 +175,20 @@ impl<'a, 'b> Visitor for Interpreter<'a> {
             Statement::Print(expr) => {
                 let val = self.visit_expr(expr)?;
                 match &val {
-                    Value::Number(num) => {println!("{}", *num)}
-                    Value::String(str) => {println!("{}", *str)}
-                    Value::Boolean(bool) => {println!("{}", *bool)}
+                    Value::Number(num) => {
+                        println!("{}", *num)
+                    }
+                    Value::String(str) => {
+                        println!("{}", *str)
+                    }
+                    Value::Boolean(bool) => {
+                        println!("{}", *bool)
+                    }
                 }
             }
             Statement::Expr(expr) => {
                 let v = self.visit_expr(expr)?;
-                return Ok(Some(v))
+                return Ok(Some(v));
             }
             Statement::Block(block) => {
                 self.env.new_block();
@@ -186,7 +197,7 @@ impl<'a, 'b> Visitor for Interpreter<'a> {
                 }
                 self.env.drop_block();
             }
-            Statement::If(condition, then_branch , else_branch) => {
+            Statement::If(condition, then_branch, else_branch) => {
                 let v = self.visit_expr(condition)?;
                 match v {
                     Value::Number(_) => {}
@@ -205,30 +216,30 @@ impl<'a, 'b> Visitor for Interpreter<'a> {
                         }
                     }
                 }
-                return Ok(None)
+                return Ok(None);
             }
             Statement::While(cond, then) => {
-                    let v = self.visit_expr(cond)?;
-                    match v {
-                        Value::Number(_) => todo!(),
-                        Value::String(_) => todo!(),
-                        Value::Boolean(c) => {
-                            let mut loop_condition = c;
-                            while loop_condition {
-                                self.visit_stmt(then)?;
-                                loop_condition = match self.visit_expr(cond) {
-                                    Ok(res) => match res {
-                                        Value::Number(_) => todo!(),
-                                        Value::String(_) => todo!(),
-                                        Value::Boolean(e) => e,
-                                    },
-                                    Err(e) => return Err(e),
-                                }
+                let v = self.visit_expr(cond)?;
+                match v {
+                    Value::Number(_) => todo!(),
+                    Value::String(_) => todo!(),
+                    Value::Boolean(c) => {
+                        let mut loop_condition = c;
+                        while loop_condition {
+                            self.visit_stmt(then)?;
+                            loop_condition = match self.visit_expr(cond) {
+                                Ok(res) => match res {
+                                    Value::Number(_) => todo!(),
+                                    Value::String(_) => todo!(),
+                                    Value::Boolean(e) => e,
+                                },
+                                Err(e) => return Err(e),
                             }
-                        },
+                        }
                     }
-                return Ok(None)
-            },
+                }
+                return Ok(None);
+            }
         }
         Ok(None)
     }
@@ -271,8 +282,12 @@ impl<'a, 'b> Visitor for Interpreter<'a> {
                             BinaryOperator::Minus => Ok(Value::Number(left - right)),
                             BinaryOperator::Star => Ok(Value::Number(left * right)),
                             BinaryOperator::Slash => Ok(Value::Number(left / right)),
-                            BinaryOperator::BangEqual => Ok(Value::Boolean((left - right).abs() > f64::EPSILON)),
-                            BinaryOperator::EqualEqual => Ok(Value::Boolean((left - right).abs() < f64::EPSILON)),
+                            BinaryOperator::BangEqual => {
+                                Ok(Value::Boolean((left - right).abs() > f64::EPSILON))
+                            }
+                            BinaryOperator::EqualEqual => {
+                                Ok(Value::Boolean((left - right).abs() < f64::EPSILON))
+                            }
                             BinaryOperator::Greater => Ok(Value::Boolean(left > right)),
                             BinaryOperator::GreaterEqual => Ok(Value::Boolean(left >= right)),
                             BinaryOperator::Less => Ok(Value::Boolean(left < right)),
@@ -317,7 +332,14 @@ impl<'a, 'b> Visitor for Interpreter<'a> {
                 }
             }
             Expression::Grouping(x) => self.visit_expr(x),
-            Expression::Variable(ident) => Ok(self.env.get(ident).unwrap().clone()),
+            Expression::Variable(ident) => {
+                match self.env.get(ident) {
+                    Some(val) => {
+                        Ok(val.clone())
+                    },
+                    None => Err("No identifier found".to_owned()),
+                }
+            }
             Expression::Assignment(ident, e) => {
                 let val = self.visit_expr(e)?;
                 match self.env.set(ident, val) {

@@ -42,7 +42,6 @@ impl<'a> Parser<'a> {
                 TokenType::Eof => break,
                 _ => {
                     // Start the chain
-                    println!("Top token: {:?}", token);
                     let decl = self.parse_decl()?;
                     self.tree.push(decl);
                 }
@@ -108,7 +107,6 @@ impl<'a> Parser<'a> {
                         Ok(Statement::Print(Box::new(expr)))
                     }
                     TokenType::LeftBrace => {
-                        println!("LEFT BRACe");
                         let block = self.parse_block()?;
                         Ok(Statement::Block(block))
                     }
@@ -152,7 +150,7 @@ impl<'a> Parser<'a> {
                         self.match_token(&TokenType::LeftBrace)?;
                         self.current_node += 1;
                         let then_block = self.parse_block()?;
-                        self.current_node += 1;
+
                         Ok(Statement::While(
                             Box::new(condition),
                             Box::new(Statement::Block(then_block)),
@@ -182,7 +180,6 @@ impl<'a> Parser<'a> {
                 }
             }
         }
-        println!("STMTS:{:?}", stmts);
         Ok(stmts)
     }
     fn parse_expr(&mut self) -> Result<Expression, String> {

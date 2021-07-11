@@ -262,9 +262,6 @@ impl<'v> Scanner<'v> {
             }
         }
         self.tokens.push(self.create_token(TokenType::Eof));
-        for token in self.tokens.iter() {
-            println!("{:?}", token);
-        }
     }
 
 }
