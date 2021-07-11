@@ -6,18 +6,19 @@ print k;
 print k;
 k = 8;
 print k;
-if (true) {
+if (false) {
   print "inner true";
 } else {
   print "inner false";
 }
-if (false) {
+if (true) {
   print "second inner true";
 } else {
   print "second inner false";
 }
 
-var i = 1;
+var i = 0;
 while (i < 5) {
-  i = 6;
+  print i;
+  i = i + 1;
 }

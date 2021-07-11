@@ -78,11 +78,6 @@ impl<'a> Parser<'a> {
             None => return Err("Unexpected end of tokens".to_owned()),
         };
         // Initializer
-        println!(
-            "INIT{}, {:?}",
-            self.current_node,
-            self.tokens.get(self.current_node)
-        );
         self.current_node += 1;
         match self.tokens.get(self.current_node) {
             Some(token) => match token.token_type {
@@ -113,6 +108,7 @@ impl<'a> Parser<'a> {
                         Ok(Statement::Print(Box::new(expr)))
                     }
                     TokenType::LeftBrace => {
+                        println!("LEFT BRACe");
                         let block = self.parse_block()?;
                         Ok(Statement::Block(block))
                     }
@@ -126,12 +122,15 @@ impl<'a> Parser<'a> {
                         self.match_token(&TokenType::LeftBrace)?;
                         self.current_node += 1;
                         let then_block = self.parse_block()?;
-                        println!("parse block-------{:?}", self.tokens.get(self.current_node));
+                        self.current_node += 1;
                         let else_block = match self.tokens.get(self.current_node) {
                             Some(token) => match token.token_type {
                                 TokenType::Else => {
+                                    self.current_node += 1;
                                     self.match_token(&TokenType::LeftBrace)?;
+                                    self.current_node += 1;
                                     let block = self.parse_block()?;
+
                                     Some(Statement::Block(block))
                                 }
                                 _ => None,
@@ -145,10 +144,15 @@ impl<'a> Parser<'a> {
                         ))
                     }
                     TokenType::While => {
+                        self.current_node += 1;
                         self.match_token(&TokenType::LeftParen)?;
+                        self.current_node += 1;
                         let condition = self.parse_expr()?;
+                        self.current_node += 1;
                         self.match_token(&TokenType::LeftBrace)?;
+                        self.current_node += 1;
                         let then_block = self.parse_block()?;
+                        self.current_node += 1;
                         Ok(Statement::While(
                             Box::new(condition),
                             Box::new(Statement::Block(then_block)),
