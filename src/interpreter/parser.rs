@@ -1,5 +1,5 @@
 use super::scanner::{Token, TokenType};
-use std::{format, mem::uninitialized};
+use std::format;
 
 pub struct Parser<'a> {
     tree: Vec<Decl>,
@@ -53,14 +53,12 @@ impl<'a> Parser<'a> {
         match self.tokens.get(self.current_node) {
             Some(tok) => match tok.token_type {
                 TokenType::Var => {
-                    self.current_node += 1;
                     let (ident, expr) = self.parse_var()?;
                     Ok(Decl::Var(ident, Box::new(expr)))
                 }
                 _ => {
                     // Assume a statement
                     let stmt = self.parse_stmt()?;
-                    self.current_node += 1;
                     Ok(Decl::Statement(Box::new(stmt)))
                 }
             },
@@ -69,6 +67,15 @@ impl<'a> Parser<'a> {
     }
     fn parse_var(&mut self) -> Result<(String, Option<Expression>), String> {
         // Identifier
+        match self.tokens.get(self.current_node) {
+            Some(tok) => match tok.token_type {
+                TokenType::Var => {
+                    self.current_node += 1;
+                }
+                _ => return Err("This is not a variable declaration".to_owned()),
+            },
+            _ => return Err("Impossible".to_owned()),
+        }
         let ident = match self.tokens.get(self.current_node) {
             Some(token) => match &token.token_type {
                 TokenType::Identifier(s) => s.to_owned(),
@@ -104,6 +111,7 @@ impl<'a> Parser<'a> {
                         self.current_node += 1;
                         let expr = self.parse_expr()?;
                         self.match_token(&TokenType::Semicolon)?;
+                        self.current_node += 1;
                         Ok(Statement::Print(Box::new(expr)))
                     }
                     TokenType::LeftBrace => {
@@ -128,7 +136,7 @@ impl<'a> Parser<'a> {
                                     self.match_token(&TokenType::LeftBrace)?;
                                     self.current_node += 1;
                                     let block = self.parse_block()?;
-
+                                    self.current_node += 1;
                                     Some(Statement::Block(block))
                                 }
                                 _ => None,
@@ -150,7 +158,7 @@ impl<'a> Parser<'a> {
                         self.match_token(&TokenType::LeftBrace)?;
                         self.current_node += 1;
                         let then_block = self.parse_block()?;
-
+                        self.current_node += 1;
                         Ok(Statement::While(
                             Box::new(condition),
                             Box::new(Statement::Block(then_block)),
@@ -160,6 +168,7 @@ impl<'a> Parser<'a> {
                         // Assume expression
                         let expr = self.parse_expr()?;
                         self.match_token(&TokenType::Semicolon)?;
+                        self.current_node += 1;
                         Ok(Statement::Expr(Box::new(expr)))
                     }
                 }
@@ -327,7 +336,10 @@ impl<'a> Parser<'a> {
                     }
                 }
                 _ => {
-                    return Err(String::from("Unexpected token at parsing literal"));
+                    return Err(String::from(format!(
+                        "Unexpected token at parsing literal {:?} ",
+                        x
+                    )));
                 }
             },
             None => return Err(String::from("Error parsing literal")),
