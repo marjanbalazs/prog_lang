@@ -1,6 +1,65 @@
 use super::scanner::{Token, TokenType};
 use std::format;
 
+/*
+program        → declaration* EOF ;
+
+declaration    → classDecl
+               | funDecl
+               | varDecl
+               | statement ;
+classDecl      → "class" IDENTIFIER ( "<" IDENTIFIER )?
+                 "{" function* "}" ;
+funDecl        → "fun" function ;
+varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
+
+statement      → exprStmt
+               | forStmt
+               | ifStmt
+               | printStmt
+               | returnStmt
+               | whileStmt
+               | block ;
+exprStmt       → expression ";" ;
+forStmt        → "for" "(" ( varDecl | exprStmt | ";" )
+                           expression? ";"
+                           expression? ")" statement ;
+ifStmt         → "if" "(" expression ")" statement
+                 ( "else" statement )? ;
+printStmt      → "print" expression ";" ;
+returnStmt     → "return" expression? ";" ;
+whileStmt      → "while" "(" expression ")" statement ;
+block          → "{" declaration* "}" ;
+
+expression     → assignment ;
+
+assignment     → ( call "." )? IDENTIFIER "=" assignment
+               | logic_or ;
+
+logic_or       → logic_and ( "or" logic_and )* ;
+logic_and      → equality ( "and" equality )* ;
+equality       → comparison ( ( "!=" | "==" ) comparison )* ;
+comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+term           → factor ( ( "-" | "+" ) factor )* ;
+factor         → unary ( ( "/" | "*" ) unary )* ;
+
+unary          → ( "!" | "-" ) unary | call ;
+call           → primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
+primary        → "true" | "false" | "nil" | "this"
+               | NUMBER | STRING | IDENTIFIER | "(" expression ")"
+               | "super" "." IDENTIFIER ;
+
+function       → IDENTIFIER "(" parameters? ")" block ;
+parameters     → IDENTIFIER ( "," IDENTIFIER )* ;
+arguments      → expression ( "," expression )* ;
+
+NUMBER         → DIGIT+ ( "." DIGIT+ )? ;
+STRING         → "\"" <any char except "\"">* "\"" ;
+IDENTIFIER     → ALPHA ( ALPHA | DIGIT )* ;
+ALPHA          → "a" ... "z" | "A" ... "Z" | "_" ;
+DIGIT          → "0" ... "9" ;
+*/
+
 pub struct Parser<'a> {
     tree: Vec<Decl>,
     current_node: usize,
@@ -56,6 +115,40 @@ impl<'a> Parser<'a> {
                     let (ident, expr) = self.parse_var()?;
                     Ok(Decl::Var(ident, Box::new(expr)))
                 }
+                TokenType::Fun => {
+                    self.current_node += 1;
+                    let name = match self.tokens.get(self.current_node) {
+                        Some(t) => match &t.token_type {
+                            TokenType::Identifier(ident) => ident,
+                            _ => return Err("No identifier found after fun decl keyword".to_owned())
+                        }
+                        None => return Err("Unexpected end of tokens at function decl".to_owned()),
+                    };
+                    self.match_token(&TokenType::LeftParen)?;
+                    let mut params = Vec::new();
+                    loop {
+                        self.current_node += 1;
+                        let current_token = self.tokens.get(self.current_node);
+                        let name = match current_token {
+                            Some(token) => match &token.token_type {
+                                TokenType::RightParen => {
+                                    break;
+                                },
+                                TokenType::Comma => {
+                                    continue;
+                                }
+                                TokenType::Identifier(ident) => ident,
+                                _ => return Err("Could not parse function arg".to_owned())
+                            },
+                            None => {
+                                return Err("No more tokens at call argument parsing".to_owned())
+                            }
+                        };
+                        params.push(name.to_owned());
+                    }
+                    let body = self.parse_block()?;
+                    Ok(Decl::Func(name.to_owned(), params, body))
+                },
                 _ => {
                     // Assume a statement
                     let stmt = self.parse_stmt()?;
@@ -307,9 +400,48 @@ impl<'a> Parser<'a> {
                         Box::new(right),
                     ))
                 }
-                _ => self.parse_primary(),
+                _ => self.parse_call(),
             },
             None => Err("No more tokens at unary".to_owned()),
+        }
+    }
+    fn parse_call(&mut self) -> Result<Expression, String> {
+        match self.tokens.get(self.current_node) {
+            Some(_) => {
+                let primary = match self.parse_primary() {
+                    Ok(p) => p,
+                    Err(e) => return Err(e),
+                };
+                match self.match_token(&TokenType::LeftParen) {
+                    Ok(_) => {
+                        let mut args = Vec::new();
+                        loop {
+                            self.current_node += 1;
+                            let current_token = self.tokens.get(self.current_node);
+                            let expr = match current_token {
+                                Some(token) => match token.token_type {
+                                    TokenType::RightParen => {
+                                        return Ok(Expression::Call(Box::new(primary), args))
+                                    },
+                                    TokenType::Comma => {
+                                        continue;
+                                    }
+                                    _ => self.parse_expr(),
+                                },
+                                None => {
+                                    return Err("No more tokens at call argument parsing".to_owned())
+                                }
+                            };
+                            match expr {
+                                Ok(e) => args.push(e),
+                                Err(e) => return Err(e),
+                            }
+                        }
+                    }
+                    Err(_) => return Ok(primary),
+                }
+            }
+            None => Err("No more token found for parsing".to_owned())
         }
     }
     fn parse_primary(&mut self) -> Result<Expression, String> {
@@ -353,6 +485,7 @@ impl<'a> Parser<'a> {
 pub enum Decl {
     Var(String, Box<Option<Expression>>),
     Statement(Box<Statement>),
+    Func(String, Vec<String>, Vec<Decl>),
 }
 #[derive(Debug)]
 pub enum Statement {
@@ -362,13 +495,13 @@ pub enum Statement {
     Block(Vec<Decl>),
     Print(Box<Expression>),
 }
-
 #[derive(Debug)]
 pub enum Expression {
     Literal(LiteralType),
     Variable(String),
     Assignment(String, Box<Expression>),
     Unary(UnaryOperator, Box<Expression>),
+    Call(Box<Expression>, Vec<Expression>),
     Binary(BinaryOperator, Box<Expression>, Box<Expression>),
     Grouping(Box<Expression>),
 }

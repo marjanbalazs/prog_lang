@@ -85,7 +85,7 @@ impl Environment {
         }
     }
 
-    fn decl_arg(&mut self, ident: &str, value: Option<Value>) -> Result<(), ()> {
+    fn decl_arg(&mut self, ident: &str, value: Option<Value>) -> Result<(), String> {
         let block = self.blocks.get_mut(self.current_scope).unwrap();
         block.vars.push((ident.to_owned(), value));
         Ok(())
@@ -113,9 +113,10 @@ impl Environment {
 }
 
 trait Visitor {
-    fn visit_decl(&mut self, expr: &Decl) -> Result<(), String>;
+    fn visit_decl(&mut self, expr: &Decl) -> Result<Option<Value>, String>;
     fn visit_stmt(&mut self, expr: &Statement) -> Result<Option<Value>, String>;
     fn visit_expr(&mut self, expr: &Expression) -> Result<Value, String>;
+    fn visit_func(&mut self, expr: &Decl) -> Result<Value, String>;
 }
 
 #[derive(Debug, Clone)]
@@ -151,24 +152,26 @@ impl<'a, 'b> Interpreter<'a> {
 }
 
 impl<'a, 'b> Visitor for Interpreter<'a> {
-    fn visit_decl(&mut self, decl: &Decl) -> Result<(), String> {
+    fn visit_decl(&mut self, decl: &Decl) -> Result<Option<Value>, String> {
         match decl {
             Decl::Var(ident, expr) => match expr.deref() {
                 Some(e) => {
                     let val = self.visit_expr(e)?;
-                    let res = self.env.decl_arg(ident, Some(val));
-                    Ok(())
+                    self.env.decl_arg(ident, Some(val))?;
+                    Ok(None)
                 }
                 None => {
-                    self.env.decl_arg(ident, None);
-                    Ok(())
+                    self.env.decl_arg(ident, None)?;
+                    Ok(None)
                 }
+
             },
-            Decl::Statement(stmt) => {
-                self.visit_stmt(stmt);
-                Ok(())
-            }
+            Decl::Statement(stmt) => self.visit_stmt(stmt),
+            Decl::Func(_, _, _) => todo!(),
         }
+    }
+    fn visit_func(&mut self, block: &Decl) -> Result<Value, String> {
+        Ok(Value::Boolean(true))
     }
     fn visit_stmt(&mut self, stmt: &Statement) -> Result<Option<Value>, String> {
         match stmt {
@@ -272,6 +275,13 @@ impl<'a, 'b> Visitor for Interpreter<'a> {
                     }
                 }
             },
+            Expression::Call(identifier, arguments) => {
+                let evaluated_args: Vec<Value> = arguments
+                    .iter()
+                    .map(|x| self.visit_expr(x).unwrap())
+                    .collect();
+                Ok(Value::Boolean(true))
+            }
             Expression::Binary(op, lhs, rhs) => {
                 let x = self.visit_expr(lhs);
                 let y = self.visit_expr(rhs);
@@ -332,14 +342,10 @@ impl<'a, 'b> Visitor for Interpreter<'a> {
                 }
             }
             Expression::Grouping(x) => self.visit_expr(x),
-            Expression::Variable(ident) => {
-                match self.env.get(ident) {
-                    Some(val) => {
-                        Ok(val.clone())
-                    },
-                    None => Err("No identifier found".to_owned()),
-                }
-            }
+            Expression::Variable(ident) => match self.env.get(ident) {
+                Some(val) => Ok(val.clone()),
+                None => Err("No identifier found".to_owned()),
+            },
             Expression::Assignment(ident, e) => {
                 let val = self.visit_expr(e)?;
                 match self.env.set(ident, val) {

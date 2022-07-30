@@ -13,7 +13,7 @@ pub enum TokenType {
     Semicolon,
     Slash,
     Star,
-    // One or two character tokens.
+    // One or two character tokens
     Bang,
     BangEqual,
     Equal,
@@ -22,11 +22,11 @@ pub enum TokenType {
     GreaterEqual,
     Less,
     LessEqual,
-    // Literals.
+    // Literals
     Identifier(String),
     String(String),
     Number(f64),
-    // Keywords.
+    // Keywords
     And,
     Class,
     Else,
